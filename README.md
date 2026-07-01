@@ -1,95 +1,415 @@
-# Sistema Agéntico Analítico con LLM + RAG + Tools
+# Agentic Analytics RAG
 
-Prototipo técnico desarrollado en Python para la prueba de **Python Developer / Data Analyst con IA**.
-El sistema implementa un flujo agéntico completo que integra recuperación documental tipo RAG, herramientas analíticas, generación de reportes, evaluación mediante agente juez y observabilidad de KPIs.
+Sistema agéntico analítico desarrollado en Python para responder preguntas de negocio usando **LLM + RAG + Tools + Agente Juez**, con interfaz en Streamlit, backend en FastAPI, observabilidad local y arquitectura preparada para AWS.
 
-El dominio elegido es un **motor analítico conversacional para indicadores financieros y de desempeño**, orientado a escenarios de compensación, aseguramiento o gestión organizacional.
+Este proyecto fue construido como una prueba técnica para demostrar un flujo completo de análisis asistido por IA: recuperación documental, consulta de datos estructurados, cálculo de KPIs, generación de reportes PDF y evaluación automática de calidad de la respuesta.
 
 ---
 
-## 1. Descripción general
+## Enlaces de entrega
 
-Este proyecto permite que un usuario realice preguntas en lenguaje natural sobre indicadores de desempeño, siniestralidad, regionales, KPIs y reportes ejecutivos.
+- **Repositorio público:** https://github.com/laukmila-cloud/agentic-analytics-rag
+- **Video demo:** Pendiente de agregar
+- **Nube asignada:** Amazon Web Services
+- **Lenguaje principal:** Python 3.12+
+- **Backend:** FastAPI
+- **Interfaz:** Streamlit
+- **Base analítica local:** DuckDB + Parquet
+- **RAG local:** Índice persistente con recuperación vectorial y reranking híbrido
 
-El sistema recibe la consulta, recupera contexto documental, ejecuta herramientas analíticas sobre datos estructurados, calcula KPIs relevantes, genera reportes PDF cuando se solicita y valida la respuesta mediante un agente juez.
+---
 
-Flujo principal:
+## Estado de la entrega
+
+Este proyecto corresponde a un **MVP local funcional con arquitectura preparada para AWS**.
+
+El sistema implementa:
+
+- Orquestador agéntico.
+- Patrón **Orchestrator & Sub-workers**.
+- Recuperación documental con RAG local persistente.
+- Ingesta documental, chunking, recuperación y reranking híbrido.
+- Herramientas externas para análisis de datos, cálculo KPI y generación de reportes PDF.
+- Agente juez con fallback local y preparación para Amazon Bedrock.
+- Control de calidad mediante umbral `judge_score >= 7.5`.
+- Dashboard de observabilidad con 8 KPIs.
+- Documentación técnica en español.
+- Dockerfile para contenerización.
+- GitHub Actions para validación automática con pruebas y Ruff.
+
+La integración con Amazon Bedrock está preparada mediante la variable:
+
+```env
+USE_BEDROCK=true
+```
+
+Por defecto, la demo local usa:
+
+```env
+USE_BEDROCK=false
+```
+
+Esto permite ejecutar el proyecto sin credenciales AWS. El despliegue en AWS, CloudWatch y vector store administrado se documentan como arquitectura objetivo.
+
+---
+
+## Nota sobre el corpus documental
+
+Por confidencialidad, el corpus incluido corresponde a **documentos sintéticos representativos del dominio**.
+
+Estos documentos simulan políticas, metodologías e interpretación de indicadores para demostrar el flujo RAG sin exponer información sensible, privada o propietaria.
+
+El corpus se encuentra en:
+
+```text
+data/documents/
+```
+
+La solución está diseñada para reemplazar este corpus sintético por documentos reales en un entorno productivo, manteniendo el mismo flujo de ingesta, chunking, recuperación, reranking y evaluación.
+
+---
+
+## Objetivo del sistema
+
+El sistema permite que un usuario realice preguntas de negocio como:
+
+```text
+Compara el promedio del indicador de siniestralidad por regional y genera un reporte PDF.
+```
+
+A partir de esa consulta, el sistema:
+
+1. Recupera contexto documental relevante mediante RAG.
+2. Ejecuta análisis estructurado sobre datos Parquet usando DuckDB.
+3. Calcula KPIs complementarios.
+4. Genera una respuesta ejecutiva.
+5. Evalúa la respuesta con un agente juez.
+6. Registra métricas de observabilidad.
+7. Genera un reporte PDF descargable si el usuario lo solicita.
+
+---
+
+## Arquitectura general
+
+La solución sigue un patrón agéntico modular:
 
 ```text
 Usuario
-→ Interfaz Streamlit
-→ Backend FastAPI
-→ Agente Orquestador
-→ Worker RAG
-→ Tools analíticas
-→ Agente juez
-→ Métricas de observabilidad
-→ Respuesta final
+  |
+  v
+Streamlit UI
+  |
+  v
+FastAPI Backend
+  |
+  v
+Agent Orchestrator
+  |
+  |-- RAG Worker
+  |     |-- Local Vector Store
+  |     |-- Document Chunking
+  |     |-- Hybrid Reranking
+  |
+  |-- Analytics Worker
+  |     |-- DuckDB Tool
+  |     |-- Parquet Data
+  |
+  |-- KPI Calculator Tool
+  |
+  |-- Report Worker
+  |     |-- PDF Generator
+  |
+  |-- Judge Agent
+  |     |-- Heuristic Judge
+  |     |-- Bedrock-ready Judge LLM
+  |
+  |-- Metrics Logger
+        |-- metrics.jsonl
+        |-- Streamlit Dashboard
 ```
 
 ---
 
-## 2. Objetivo del sistema
+## Componentes principales
 
-El objetivo es demostrar una arquitectura funcional de IA generativa aplicada a analítica de datos, integrando:
+### 1. Orquestador agéntico
 
-* Un agente orquestador.
-* Subcomponentes especializados.
-* RAG sobre corpus documental.
-* Tools externas.
-* Consulta analítica con DuckDB sobre archivos Parquet.
-* Cálculo de KPIs.
-* Generación de reportes PDF.
-* Agente juez evaluador.
-* Observabilidad con KPIs técnicos y de negocio.
-* Preparación para despliegue en AWS.
+Archivo principal:
 
----
+```text
+orchestrator/agent_orchestrator.py
+```
 
-## 3. Stack tecnológico
+Responsabilidades:
 
-| Componente                     | Tecnología                                  |
-| ------------------------------ | ------------------------------------------- |
-| Lenguaje                       | Python 3.12+                                |
-| Backend                        | FastAPI                                     |
-| Frontend                       | Streamlit                                   |
-| RAG local                      | TF-IDF + cosine similarity con scikit-learn |
-| Lectura documental             | pypdf + archivos TXT                        |
-| Datos estructurados            | Parquet                                     |
-| Motor analítico                | DuckDB                                      |
-| Reportes                       | ReportLab                                   |
-| LLM productivo propuesto       | Amazon Bedrock                              |
-| Modelo principal propuesto     | Claude 3 Haiku                              |
-| Modelo fallback propuesto      | Claude 3 Sonnet                             |
-| Observabilidad local           | JSONL + dashboard Streamlit                 |
-| Observabilidad cloud propuesta | Amazon CloudWatch                           |
-| Despliegue propuesto           | Docker + ECS Fargate o EC2                  |
+- Coordinar el flujo completo de la consulta.
+- Ejecutar recuperación documental.
+- Decidir si se requiere análisis estructurado.
+- Ejecutar herramientas externas.
+- Componer la respuesta final.
+- Invocar el agente juez.
+- Generar reportes PDF.
+- Registrar métricas de observabilidad.
 
 ---
 
-## 4. Arquitectura implementada
+### 2. RAG local persistente
 
-El sistema se organiza en módulos separados para facilitar mantenimiento, evaluación y despliegue.
+Archivos principales:
+
+```text
+rag/vector_store.py
+rag/local_retriever.py
+workers/rag_worker.py
+```
+
+Funciones implementadas:
+
+- Lectura de documentos `.txt` y `.pdf`.
+- Chunking con solapamiento.
+- Índice persistente local.
+- Recuperación por similitud.
+- Reranking híbrido combinando señales vectoriales y palabras clave.
+- Métricas de recuperación como latencia, chunks encontrados y cobertura.
+
+La cobertura RAG se calcula usando `raw_score` o `rerank_score`, evitando depender del score normalizado final.
+
+---
+
+### 3. Herramientas externas
+
+El sistema implementa herramientas tipo MCP/tools a nivel local:
+
+```text
+tools/duckdb_tool.py
+tools/kpi_calculator.py
+tools/pdf_generator.py
+```
+
+#### DuckDB Tool
+
+Ejecuta consultas analíticas sobre datos Parquet.
+
+Ejemplo de salida:
+
+```text
+Promedio del indicador por regional.
+Total de registros.
+Agrupaciones por mes o regional.
+```
+
+#### KPI Calculator
+
+Calcula diferencias entre indicadores, brechas y valores comparativos.
+
+Ejemplo:
+
+```text
+Diferencia absoluta entre Bogotá y Antioquia.
+Regional con mayor promedio.
+```
+
+#### PDF Generator
+
+Genera reportes PDF a partir de la respuesta ejecutiva final.
+
+Los reportes se guardan localmente en:
+
+```text
+data/reports/
+```
+
+Esta carpeta está excluida del repositorio mediante `.gitignore`.
+
+---
+
+### 4. Agente juez
+
+Archivo principal:
+
+```text
+judge/judge_llm.py
+```
+
+El agente juez evalúa:
+
+- Relevancia frente a la pregunta.
+- Uso correcto del contexto RAG.
+- Precisión numérica.
+- Riesgo de alucinación.
+- Claridad de la respuesta.
+- Suficiencia del corpus documental.
+
+El sistema usa un umbral operativo:
+
+```text
+judge_score >= 7.5
+```
+
+Si la respuesta no alcanza el umbral, el orquestador agrega una advertencia:
+
+```text
+Advertencia del agente juez
+```
+
+Esto demuestra que el juez no solo califica, sino que también participa en el control de calidad del flujo.
+
+---
+
+### 5. Integración LLM / Bedrock-ready
+
+Archivo principal:
+
+```text
+llm/bedrock_client.py
+```
+
+El sistema está preparado para usar Amazon Bedrock.
+
+Por defecto:
+
+```env
+USE_BEDROCK=false
+```
+
+En modo local, el sistema usa respuestas fallback determinísticas para permitir la ejecución sin credenciales cloud.
+
+Para activar Bedrock:
+
+```env
+USE_BEDROCK=true
+AWS_REGION=us-east-1
+BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
+BEDROCK_EMBEDDING_MODEL_ID=amazon.titan-embed-text-v2:0
+```
+
+---
+
+## Observabilidad
+
+El sistema registra métricas en:
+
+```text
+data/metrics.jsonl
+```
+
+También muestra un dashboard en Streamlit.
+
+### KPIs implementados
+
+| KPI | Descripción |
+|---|---|
+| `tool_success_rate` | Porcentaje de herramientas ejecutadas correctamente |
+| `judge_score` | Puntaje entregado por el agente juez |
+| `judge_passed` | Indica si la respuesta superó el umbral del juez |
+| `ttl_seconds` | Tiempo total de respuesta |
+| `estimated_cost_usd` | Estimación local de costo por consulta |
+| `calculation_error_rate` | Tasa de error en cálculos analíticos |
+| `rag_latency_seconds` | Latencia del componente RAG |
+| `rag_corpus_coverage` | Indica si el corpus recuperado soporta la consulta |
+| `avg_tokens_per_session` | Estimación de tokens por sesión |
+
+### Umbrales de referencia
+
+| Métrica | Umbral |
+|---|---:|
+| `tool_success_rate` | >= 0.95 |
+| `judge_score` | >= 7.5 |
+| `ttl_seconds` | < 10 segundos |
+| `estimated_cost_usd` | < 0.05 USD |
+| `calculation_error_rate` | < 0.03 |
+| `rag_latency_seconds` | < 2 segundos |
+| `rag_corpus_coverage` | >= 0.85 |
+| `avg_tokens_per_session` | Reportado y monitoreado |
+
+---
+
+## Interfaz de usuario
+
+La interfaz está desarrollada en Streamlit.
+
+Archivo principal:
+
+```text
+app/ui_streamlit.py
+```
+
+Permite:
+
+- Escribir consultas de negocio.
+- Ejecutar análisis.
+- Ver respuesta ejecutiva.
+- Descargar reporte PDF.
+- Consultar fuentes recuperadas.
+- Ver soporte técnico.
+- Revisar métricas de observabilidad.
+- Consultar arquitectura general.
+
+---
+
+## Backend API
+
+El backend está desarrollado con FastAPI.
+
+Archivo principal:
+
+```text
+app/main.py
+```
+
+### Endpoint de salud
+
+```http
+GET /
+```
+
+Respuesta esperada:
+
+```json
+{
+  "status": "ok",
+  "message": "Sistema agéntico activo"
+}
+```
+
+### Endpoint de chat
+
+```http
+POST /chat
+```
+
+Ejemplo de payload:
+
+```json
+{
+  "question": "Compara el promedio del indicador de siniestralidad por regional"
+}
+```
+
+---
+
+## Estructura del proyecto
 
 ```text
 agentic-analytics-rag/
 │
 ├── app/
-│   ├── main.py
-│   ├── ui_streamlit.py
 │   ├── config.py
-│   └── schemas.py
+│   ├── main.py
+│   ├── schemas.py
+│   └── ui_streamlit.py
 │
 ├── orchestrator/
 │   └── agent_orchestrator.py
 │
 ├── workers/
-│   ├── rag_worker.py
 │   ├── analytics_worker.py
+│   ├── rag_worker.py
 │   └── report_worker.py
 │
 ├── rag/
-│   └── local_retriever.py
+│   ├── local_retriever.py
+│   └── vector_store.py
 │
 ├── tools/
 │   ├── duckdb_tool.py
@@ -107,261 +427,79 @@ agentic-analytics-rag/
 │
 ├── data/
 │   ├── documents/
-│   ├── parquet/
-│   └── reports/
+│   └── parquet/
 │
 ├── docs/
+│   ├── arquitectura.md
+│   ├── administrador.md
+│   └── guia_usuario.md
 │
 ├── tests/
+│   └── test_smoke.py
 │
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+│
+├── Dockerfile
+├── .dockerignore
+├── .gitignore
+├── .env.example
 ├── requirements.txt
-├── .env
 └── README.md
 ```
 
 ---
 
-## 5. Componentes principales
+## Requisitos
 
-### 5.1 Agente orquestador
+- Python 3.12+
+- pip
+- Git
+- PowerShell o terminal compatible
+- Opcional: Docker
+- Opcional: credenciales AWS para activar Bedrock
 
-El orquestador es el componente central del sistema. Recibe la pregunta del usuario y decide qué capacidades activar.
+---
 
-Responsabilidades:
+## Instalación local
 
-* Recibir la consulta.
-* Ejecutar recuperación RAG.
-* Activar la tool analítica cuando la pregunta requiere datos.
-* Activar la calculadora de KPIs cuando hay resultados numéricos.
-* Generar PDF cuando el usuario lo solicita.
-* Componer la respuesta.
-* Enviar la respuesta al agente juez.
-* Registrar métricas de observabilidad.
+Clonar el repositorio:
 
-Archivo principal:
+```powershell
+git clone https://github.com/laukmila-cloud/agentic-analytics-rag.git
+cd agentic-analytics-rag
+```
 
-```text
-orchestrator/agent_orchestrator.py
+Crear entorno virtual:
+
+```powershell
+python -m venv .venv
+```
+
+Activar entorno virtual en Windows:
+
+```powershell
+.venv\Scripts\activate
+```
+
+Instalar dependencias:
+
+```powershell
+pip install -r requirements.txt
+```
+
+Crear archivo `.env` desde el ejemplo:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
 ---
 
-### 5.2 Worker RAG
-
-El worker RAG recupera información relevante desde el corpus documental ubicado en:
-
-```text
-data/documents/
-```
-
-En el MVP local se usa:
-
-* Lectura de TXT/PDF.
-* División de texto en chunks.
-* Vectorización TF-IDF.
-* Similitud coseno.
-* Ranking de fragmentos.
-* Normalización del score para calcular cobertura RAG.
-
-Archivo principal:
-
-```text
-rag/local_retriever.py
-```
-
-En una versión productiva AWS, este componente puede migrarse a:
-
-* Amazon Titan Embeddings v2.
-* Amazon OpenSearch Serverless.
-* pgvector en Amazon RDS.
-* Amazon S3 como almacenamiento documental.
-
----
-
-### 5.3 Tool DuckDB Analytics
-
-Herramienta analítica encargada de consultar datos estructurados en formato Parquet.
-
-Archivo principal:
-
-```text
-tools/duckdb_tool.py
-```
-
-Ejemplo de consulta soportada:
-
-```text
-Compara el promedio del indicador de siniestralidad por regional
-```
-
-La tool ejecuta SQL sobre:
-
-```text
-data/parquet/indicadores.parquet
-```
-
-Ejemplo de resultado:
-
-```text
-Regional Bogotá: promedio 72.63
-Regional Antioquia: promedio 68.27
-```
-
----
-
-### 5.4 Tool KPI Calculator
-
-Herramienta encargada de calcular brechas, diferencias o variaciones sobre los resultados analíticos.
-
-Archivo principal:
-
-```text
-tools/kpi_calculator.py
-```
+## Variables de entorno
 
 Ejemplo:
-
-```text
-Diferencia absoluta entre Bogotá y Antioquia: 4.36 puntos
-Valor más alto: Bogotá
-```
-
----
-
-### 5.5 Tool PDF Generator
-
-Herramienta encargada de generar reportes PDF cuando el usuario lo solicita.
-
-Archivo principal:
-
-```text
-tools/pdf_generator.py
-```
-
-Los reportes se guardan en:
-
-```text
-data/reports/
-```
-
-Ejemplo de consulta:
-
-```text
-Compara el promedio del indicador de siniestralidad por regional y genera un reporte PDF
-```
-
----
-
-### 5.6 Agente juez
-
-El agente juez evalúa la respuesta generada antes de entregarla al usuario.
-
-Criterios evaluados:
-
-* Relevancia frente a la pregunta.
-* Uso del contexto RAG.
-* Precisión numérica.
-* Riesgo de alucinación.
-* Claridad de la respuesta.
-
-Archivo principal:
-
-```text
-judge/judge_llm.py
-```
-
-El sistema funciona con dos modos:
-
-```text
-USE_BEDROCK=false
-→ Juez heurístico local
-
-USE_BEDROCK=true
-→ Judge LLM usando Amazon Bedrock
-```
-
----
-
-### 5.7 Capa LLM con Amazon Bedrock
-
-El sistema incluye una capa preparada para conectarse a Amazon Bedrock.
-
-Archivo principal:
-
-```text
-llm/bedrock_client.py
-```
-
-Modo actual del MVP:
-
-```text
-USE_BEDROCK=false
-```
-
-Esto permite ejecutar el sistema localmente sin credenciales AWS ni costos.
-Cuando se activa Bedrock, el sistema puede usar modelos como:
-
-* Claude 3 Haiku.
-* Claude 3 Sonnet.
-* Llama 3.
-* Titan Text.
-
----
-
-## 6. Observabilidad
-
-El sistema registra métricas por cada consulta en:
-
-```text
-data/metrics.jsonl
-```
-
-La interfaz Streamlit incluye una pestaña de observabilidad con los 8 KPIs solicitados.
-
-### KPIs implementados
-
-| # | KPI                         | Métrica                  | Umbral               |
-| - | --------------------------- | ------------------------ | -------------------- |
-| 1 | Tasa de éxito de tools      | `tool_success_rate`      | >= 95%               |
-| 2 | Score del agente juez       | `judge_score`            | >= 7.5 / 10          |
-| 3 | Time to Last Token          | `ttl_seconds`            | < 10 segundos        |
-| 4 | Costo estimado por consulta | `estimated_cost_usd`     | < USD 0.05           |
-| 5 | Tasa de error en cálculos   | `calculation_error_rate` | < 3%                 |
-| 6 | Latencia RAG                | `rag_latency_seconds`    | < 2 segundos         |
-| 7 | Cobertura del corpus RAG    | `rag_corpus_coverage`    | >= 85%               |
-| 8 | Tokens promedio por sesión  | `avg_tokens_per_session` | Reportar y optimizar |
-
----
-
-## 7. Corpus RAG
-
-El corpus documental se encuentra en:
-
-```text
-data/documents/
-```
-
-Para el MVP se usan documentos de referencia sobre:
-
-* Política de indicadores.
-* Metodología de KPIs.
-* Interpretación de siniestralidad.
-* Lineamientos de reportes ejecutivos.
-
-Ejemplo de documentos:
-
-```text
-01_politica_indicadores.txt
-02_metodologia_kpis.txt
-03_guia_interpretacion_siniestralidad.txt
-04_lineamientos_reporte_ejecutivo.txt
-```
-
----
-
-## 8. Variables de entorno
-
-Crear un archivo `.env` en la raíz del proyecto:
 
 ```env
 APP_ENV=local
@@ -375,103 +513,42 @@ DOCUMENTS_PATH=./data/documents
 PARQUET_PATH=./data/parquet
 METRICS_PATH=./data/metrics.jsonl
 REPORTS_PATH=./data/reports
+VECTOR_STORE_PATH=./data/vector_store
 ```
 
 ---
 
-## 9. Instalación local
+## Ejecución local
 
-### 9.1 Crear entorno virtual
-
-En Windows PowerShell:
-
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-### 9.2 Actualizar pip
-
-```powershell
-python -m pip install --upgrade pip
-```
-
-### 9.3 Instalar dependencias
-
-```powershell
-pip install -r requirements.txt
-```
-
----
-
-## 10. Crear datos de prueba
-
-Ejecutar:
-
-```powershell
-python scripts_create_sample_data.py
-```
-
-Este script genera:
-
-```text
-data/parquet/indicadores.parquet
-```
-
-También se puede crear el corpus documental con:
-
-```powershell
-python scripts_create_rag_documents.py
-```
-
----
-
-## 11. Ejecución del backend
-
-Ejecutar FastAPI:
+### 1. Ejecutar backend FastAPI
 
 ```powershell
 python -m uvicorn app.main:app --reload
 ```
 
-Endpoint local:
+El backend quedará disponible en:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-Documentación Swagger:
+Documentación automática:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-Endpoint principal:
-
-```text
-POST /chat
-```
-
-Ejemplo de body:
-
-```json
-{
-  "question": "Compara el promedio del indicador de siniestralidad por regional y genera un reporte PDF"
-}
-```
-
 ---
 
-## 12. Ejecución del frontend
+### 2. Ejecutar interfaz Streamlit
 
-En una segunda terminal:
+En otra terminal:
 
 ```powershell
-.venv\Scripts\activate
 streamlit run app/ui_streamlit.py
 ```
 
-URL local:
+La interfaz quedará disponible en:
 
 ```text
 http://localhost:8501
@@ -479,158 +556,196 @@ http://localhost:8501
 
 ---
 
-## 13. Ejemplos de preguntas
+## Consultas de prueba
+
+Consulta analítica con RAG y tools:
+
+```text
+Compara el promedio del indicador de siniestralidad por regional
+```
+
+Consulta con reporte PDF:
 
 ```text
 Compara el promedio del indicador de siniestralidad por regional y genera un reporte PDF
 ```
 
+Consulta fuera del dominio para probar el agente juez:
+
 ```text
-¿Qué significa una siniestralidad alta y cómo debería interpretarse?
+Dame una receta de pasta con tomate
 ```
 
-```text
-¿Cuándo una brecha entre regionales debería considerarse una alerta?
+En esta última consulta, el juez debería reducir el puntaje, marcar riesgo de alucinación alto o medio y mostrar una advertencia si el puntaje queda por debajo del umbral.
+
+---
+
+## Pruebas
+
+Ejecutar pruebas unitarias básicas:
+
+```powershell
+pytest
 ```
 
+Resultado esperado:
+
 ```text
-¿Qué métricas de observabilidad usa este sistema?
+3 passed
 ```
 
----
+Ejecutar validación crítica con Ruff:
 
-## 14. Respuesta esperada del sistema
-
-Una consulta completa puede activar:
-
-```text
-rag_search
-duckdb_analytics
-kpi_calculator
-pdf_report_generator
-judge_llm
-metrics_logger
-```
-
-Salida esperada:
-
-* Respuesta textual.
-* Fuentes recuperadas por RAG.
-* SQL ejecutado.
-* Resultados analíticos.
-* Cálculo KPI.
-* Ruta del PDF generado.
-* Evaluación del agente juez.
-* Métricas de observabilidad.
-
----
-
-## 15. Preparación para AWS
-
-La nube asignada para el proyecto es Amazon Web Services.
-
-### Arquitectura AWS propuesta
-
-| Necesidad                 | Servicio AWS                            |
-| ------------------------- | --------------------------------------- |
-| LLM principal             | Amazon Bedrock                          |
-| Embeddings                | Amazon Titan Embeddings v2              |
-| Almacenamiento documental | Amazon S3                               |
-| Datos estructurados       | Amazon S3 + Parquet                     |
-| Vector store              | OpenSearch Serverless o pgvector en RDS |
-| Backend                   | ECS Fargate o EC2 con Docker            |
-| API                       | API Gateway o ALB                       |
-| Logs y métricas           | Amazon CloudWatch                       |
-| Secretos                  | AWS Secrets Manager                     |
-| CI/CD                     | GitHub Actions                          |
-
----
-
-## 16. Selección del modelo LLM
-
-### Modelo principal propuesto: Claude 3 Haiku
-
-Se propone Claude 3 Haiku como modelo principal por:
-
-* Baja latencia.
-* Costo reducido.
-* Buena capacidad de seguir instrucciones.
-* Adecuado para respuestas analíticas estructuradas.
-* Buena integración con Amazon Bedrock.
-
-### Modelo fallback propuesto: Claude 3 Sonnet
-
-Se propone Claude 3 Sonnet como fallback para:
-
-* Consultas analíticas más complejas.
-* Mayor razonamiento contextual.
-* Evaluación avanzada del agente juez.
-* Casos donde se requiera mayor calidad en síntesis ejecutiva.
-
-### Parámetros sugeridos
-
-```text
-temperature = 0.2
-top_p = 0.9
-max_tokens = 900
-```
-
-Justificación:
-
-* Temperatura baja para reducir variabilidad.
-* Respuestas más determinísticas.
-* Mayor control en dominios analíticos.
-* Menor riesgo de alucinación.
-
----
-
-## 17. Limitaciones del MVP
-
-Este prototipo se ejecuta localmente y prioriza demostrar el flujo funcional completo.
-
-Limitaciones actuales:
-
-* El RAG local usa TF-IDF, no embeddings productivos.
-* El vector store es local, no OpenSearch ni pgvector.
-* El costo Bedrock es estimado.
-* El agente juez usa fallback heurístico cuando `USE_BEDROCK=false`.
-* Los datos Parquet son datos de prueba.
-* CloudWatch está planteado como arquitectura objetivo, no como integración obligatoria local.
-* La autenticación de usuarios no está implementada.
-* La seguridad IAM se documenta para la versión AWS.
-
----
-
-## 18. Cómo validar el MVP
-
-1. Levantar FastAPI.
-2. Levantar Streamlit.
-3. Ejecutar una consulta con regional, promedio y PDF.
-4. Verificar que se activen las tools.
-5. Confirmar que se genere un PDF.
-6. Revisar la evaluación del agente juez.
-7. Revisar las 8 tarjetas KPI en la pestaña de métricas.
-8. Confirmar que se escriba el archivo `data/metrics.jsonl`.
-
----
-
-## 19. Estado actual
-
-Estado del MVP:
-
-```text
-Backend FastAPI: funcional
-Frontend Streamlit: funcional
-RAG local: funcional
-DuckDB sobre Parquet: funcional
-KPI Calculator: funcional
-PDF Generator: funcional
-Judge Agent: funcional
-Métricas locales: funcional
-Preparación Bedrock: implementada con fallback
-Dashboard 8 KPIs: funcional
+```powershell
+ruff check . --select E9,F63,F7,F82
 ```
 
 ---
+
+## CI/CD
+
+El proyecto incluye GitHub Actions en:
+
+```text
+.github/workflows/ci.yml
+```
+
+El workflow ejecuta:
+
+1. Checkout del repositorio.
+2. Configuración de Python 3.12.
+3. Instalación de dependencias.
+4. Validación crítica con Ruff.
+5. Ejecución de pruebas con Pytest.
+
+---
+
+## Docker
+
+El proyecto incluye un Dockerfile para contenerización.
+
+Construir imagen:
+
+```powershell
+docker build -t agentic-analytics-rag .
+```
+
+Ejecutar contenedor:
+
+```powershell
+docker run -p 8000:8000 -p 8501:8501 agentic-analytics-rag
+```
+
+Servicios expuestos:
+
+```text
+FastAPI: http://localhost:8000
+Streamlit: http://localhost:8501
+```
+
+---
+
+## Arquitectura objetivo en AWS
+
+La arquitectura propuesta para despliegue real contempla:
+
+| Componente local | Servicio AWS objetivo |
+|---|---|
+| Streamlit | ECS Fargate, EC2 o App Runner |
+| FastAPI | ECS Fargate, Lambda + API Gateway o App Runner |
+| Documentos locales | Amazon S3 |
+| Datos Parquet locales | Amazon S3 |
+| Vector store local | Amazon OpenSearch Serverless o RDS PostgreSQL con pgvector |
+| LLM local/fallback | Amazon Bedrock |
+| Embeddings locales/fallback | Amazon Bedrock Titan Embeddings |
+| Métricas locales JSONL | Amazon CloudWatch |
+| Reportes PDF locales | Amazon S3 |
+| CI/CD local GitHub Actions | GitHub Actions + despliegue AWS |
+
+---
+
+## Ruta de despliegue real en AWS
+
+Para llevar este MVP a un entorno cloud funcional:
+
+1. Crear bucket S3 para documentos, datos Parquet y reportes.
+2. Crear índice vectorial en Amazon OpenSearch Serverless o RDS PostgreSQL con pgvector.
+3. Activar Amazon Bedrock en la región seleccionada.
+4. Configurar permisos IAM para Bedrock, S3, CloudWatch y servicio de cómputo.
+5. Contenerizar la aplicación con Docker.
+6. Desplegar backend e interfaz en ECS Fargate, EC2 o App Runner.
+7. Redirigir logs y métricas a CloudWatch.
+8. Configurar alarmas para latencia, errores de tools, score del juez y cobertura RAG.
+9. Automatizar despliegue con GitHub Actions.
+
+---
+
+## Limitaciones actuales
+
+- El sistema se entrega como MVP local funcional.
+- No incluye evidencia de despliegue productivo real en AWS.
+- Amazon Bedrock está preparado por configuración, pero no activado por defecto.
+- CloudWatch está documentado como arquitectura objetivo; la observabilidad local se registra en JSONL y dashboard Streamlit.
+- El corpus documental incluido es sintético por confidencialidad.
+- Las pruebas automatizadas son básicas y pueden ampliarse para cubrir más rutas del orquestador.
+- La estimación de costo es local y aproximada; en Bedrock real debe calcularse con tokens reales de entrada y salida.
+
+---
+
+## Cumplimiento de la prueba técnica
+
+| Requisito | Estado |
+|---|---|
+| Sistema agéntico con orquestador | Implementado |
+| Patrón Orchestrator & Sub-workers | Implementado |
+| RAG con ingesta, chunking, recuperación y reranking | Implementado en MVP local |
+| Vector store | Implementado localmente con índice persistente |
+| Tools externas mínimas | Implementadas: DuckDB, KPI Calculator, PDF Generator |
+| Agente juez | Implementado con fallback local y preparado para Bedrock |
+| Juez con umbral operativo | Implementado |
+| Observabilidad con 8 KPIs | Implementada |
+| Dashboard | Implementado en Streamlit |
+| Generación de PDF | Implementada |
+| Documentación en español | Implementada |
+| Dockerfile | Incluido |
+| GitHub Actions | Incluido |
+| Validación con Ruff | Incluida |
+| AWS Bedrock | Preparado por configuración |
+| Despliegue AWS real | Documentado como ruta objetivo |
+| Video demo | Pendiente de agregar enlace |
+
+---
+
+## Documentación adicional
+
+La documentación completa se encuentra en:
+
+```text
+docs/
+```
+
+Archivos principales:
+
+```text
+docs/arquitectura.md
+docs/administrador.md
+docs/guia_usuario.md
+```
+
+---
+
+## Autoría
+
+Proyecto desarrollado como prueba técnica para demostrar capacidades en:
+
+- Python.
+- FastAPI.
+- Streamlit.
+- RAG.
+- Sistemas agénticos.
+- Tools externas.
+- Evaluación con agente juez.
+- Observabilidad.
+- Arquitectura cloud-ready para AWS.
 
 

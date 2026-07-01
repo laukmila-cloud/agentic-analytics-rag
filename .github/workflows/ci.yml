@@ -32,6 +32,10 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Validar importaciones y pruebas
+      - name: Validar errores críticos con Ruff
+        run: |
+          ruff check . --select E9,F63,F7,F82
+
+      - name: Ejecutar pruebas
         run: |
           pytest

@@ -93,7 +93,25 @@ class AgentOrchestrator:
                 f"- Valor más alto: **{kpi_result.get('higher_value')}**.\n"
             )
 
-        # 5. Generación de reporte PDF
+        # 5. Evaluación con agente juez ANTES de generar el PDF
+        judge_result = self.judge.evaluate(
+            question=question,
+            answer=answer,
+            rag_context=rag_result,
+            analytics_result=analytics_result,
+        )
+
+        judge_threshold = 7.5
+        judge_passed = judge_result.score >= judge_threshold
+
+        if not judge_passed:
+            answer += (
+                "\n\n### Advertencia del agente juez\n\n"
+                "La respuesta requiere revisión porque no alcanzó el umbral mínimo de calidad definido para la prueba. "
+                "Se recomienda validar el contexto documental recuperado, los cálculos ejecutados y la pertinencia de la consulta."
+            )
+
+        # 6. Generación de reporte PDF con la respuesta ya validada por el juez
         if self._requires_report(question):
             report_result = self.report_worker.generate(
                 title="Reporte analítico generado por el sistema",
@@ -117,14 +135,6 @@ class AgentOrchestrator:
                     "El reporte PDF fue creado correctamente y está disponible para descarga desde la interfaz."
                 )
 
-        # 6. Evaluación con agente juez
-        judge_result = self.judge.evaluate(
-            question=question,
-            answer=answer,
-            rag_context=rag_result,
-            analytics_result=analytics_result,
-        )
-
         # 7. Métricas de observabilidad
         elapsed = time.perf_counter() - start_time
 
@@ -143,12 +153,20 @@ class AgentOrchestrator:
         )
 
         rag_chunks = rag_result.get("chunks", [])
+
+        # Corrección de cobertura RAG:
+        # No se usa el score normalizado final porque suele quedar en 1.0.
+        # Se usa raw_score, o rerank_score como respaldo, para medir relevancia real.
         rag_best_score = max(
-            [chunk.get("score", 0) for chunk in rag_chunks],
+            [
+                chunk.get("raw_score", chunk.get("rerank_score", 0))
+                for chunk in rag_chunks
+            ],
             default=0,
         )
 
-        rag_has_relevant_chunk = rag_best_score >= 0.75
+        rag_relevance_threshold = 0.15
+        rag_has_relevant_chunk = rag_best_score >= rag_relevance_threshold
 
         estimated_tokens = len(question.split()) + len(answer.split())
 
@@ -161,18 +179,34 @@ class AgentOrchestrator:
             "tool_success_rate": round(tool_success_rate, 4),
             "tools_total": total_tools,
             "tools_success": successful_tools,
+
+            # Métricas del agente juez con umbral operativo
             "judge_score": judge_result.score,
+            "judge_threshold": judge_threshold,
+            "judge_passed": judge_passed,
+
+            # Latencia y costo
             "ttl_seconds": round(elapsed, 4),
             "estimated_cost_usd": estimated_cost_usd,
+
+            # Cálculos
             "calculation_error_rate": calculation_error_rate,
+
+            # RAG
             "rag_latency_seconds": rag_result.get("latency_seconds", 0),
             "rag_corpus_coverage": 1.0 if rag_has_relevant_chunk else 0.0,
             "rag_chunks_found": len(rag_chunks),
+            "rag_best_raw_score": round(rag_best_score, 4),
             "rag_best_score": round(rag_best_score, 4),
+            "rag_relevance_threshold": rag_relevance_threshold,
+
+            # Tokens
             "tokens_estimated": estimated_tokens,
             "avg_tokens_per_session": estimated_tokens,
+
+            # Umbrales de referencia
             "threshold_tool_success_rate": 0.95,
-            "threshold_judge_score": 7.5,
+            "threshold_judge_score": judge_threshold,
             "threshold_ttl_seconds": 10,
             "threshold_cost_usd": 0.05,
             "threshold_calculation_error_rate": 0.03,
