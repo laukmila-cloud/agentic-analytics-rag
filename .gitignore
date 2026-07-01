@@ -1,0 +1,37 @@
+﻿# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Variables de entorno
+.env
+.env.local
+.env.production
+.env.txt
+
+# IDE
+.vscode/
+.idea/
+
+# Pruebas y linting
+.pytest_cache/
+.ruff_cache/
+
+# Archivos generados por la app
+data/reports/
+data/metrics.jsonl
+data/vector_store/
+
+# Archivos temporales
+*.log
+*.tmp
+*.bak
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

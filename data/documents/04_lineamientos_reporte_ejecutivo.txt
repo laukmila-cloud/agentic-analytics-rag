@@ -1,0 +1,15 @@
+Lineamientos para reportes ejecutivos
+
+Los reportes ejecutivos deben presentar los hallazgos de forma clara, trazable y accionable.
+Toda respuesta analítica debe incluir la pregunta del usuario, los datos usados, las fuentes documentales
+consultadas, los cálculos ejecutados y una síntesis interpretativa.
+
+Cuando el sistema genere un reporte PDF, debe incluir el contexto recuperado por RAG, los resultados de
+la consulta analítica, la interpretación de KPIs y la evaluación del agente juez.
+
+Las métricas mínimas de observabilidad del sistema incluyen tiempo total de respuesta, tasa de éxito de tools,
+latencia del pipeline RAG, número de chunks recuperados, score del juez, tokens estimados y costo estimado
+por consulta.
+
+El reporte debe advertir cuando la respuesta es preliminar, cuando el corpus no contiene suficiente información
+o cuando los datos estructurados no permiten responder con precisión.

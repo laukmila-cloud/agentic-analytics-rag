@@ -1,0 +1,15 @@
+Política de seguimiento de indicadores de desempeño
+
+La organización realiza seguimiento mensual de indicadores de desempeño operativo y financiero.
+Los indicadores deben analizarse por mes, regional y línea de negocio para identificar patrones, variaciones
+y posibles alertas de gestión.
+
+Uno de los indicadores principales es la siniestralidad. La siniestralidad permite evaluar la relación entre
+los costos asociados a reclamaciones, atenciones o beneficios y los ingresos o recursos disponibles.
+
+Una siniestralidad alta puede indicar mayor presión financiera, aumento de costos operativos,
+incremento de reclamaciones o deterioro del desempeño técnico. Una siniestralidad baja puede indicar
+mejor control del riesgo, eficiencia operativa o menor utilización de servicios.
+
+Los indicadores regionales deben compararse usando promedios, variaciones mensuales, brechas absolutas
+y umbrales definidos por la organización.

@@ -1,0 +1,12 @@
+Guía de interpretación de siniestralidad
+
+La siniestralidad es un indicador crítico en organizaciones de compensación, aseguramiento o beneficios.
+Representa la proporción de costos frente a ingresos, aportes o recursos disponibles.
+
+Una siniestralidad entre 60 y 70 puede interpretarse como rango controlado, dependiendo del contexto operativo.
+Una siniestralidad entre 70 y 80 requiere seguimiento porque puede reflejar incremento en costos,
+uso intensivo de servicios o cambios en el comportamiento de la población afiliada.
+Una siniestralidad superior a 80 puede representar una alerta de sostenibilidad financiera.
+
+La interpretación no debe basarse en un único valor aislado. Debe revisarse la tendencia mensual,
+la comparación por regional, el volumen de registros y las condiciones particulares de cada territorio.

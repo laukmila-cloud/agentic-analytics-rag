@@ -1,0 +1,15 @@
+Metodología para cálculo de KPIs analíticos
+
+Los KPIs deben calcularse con fuentes estructuradas y trazables. Para análisis ejecutivo se recomienda
+calcular promedio del indicador, mínimo, máximo, variación porcentual, brecha absoluta entre regionales
+y número de registros considerados.
+
+La variación porcentual se calcula como:
+valor actual menos valor anterior, dividido por el valor anterior, multiplicado por cien.
+
+La brecha absoluta entre dos regionales se calcula restando el valor del segundo grupo al valor del primer grupo.
+Cuando la brecha es positiva, el primer grupo tiene un indicador mayor. Cuando la brecha es negativa,
+el segundo grupo tiene un indicador mayor.
+
+En indicadores de siniestralidad, una diferencia mayor a 3 puntos porcentuales entre regionales debe revisarse
+como una posible alerta de desempeño, especialmente si se mantiene durante varios meses consecutivos.
